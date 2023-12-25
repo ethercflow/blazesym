@@ -52,6 +52,7 @@ mod kernel;
 mod ksym;
 mod maps;
 mod mmap;
+mod namespace;
 pub mod normalize;
 mod resolver;
 pub mod symbolize;
@@ -93,7 +94,7 @@ pub mod helper {
 
 
 /// An enumeration identifying a process.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Pid {
     /// The current process.
     Slf,
@@ -116,6 +117,12 @@ impl From<u32> for Pid {
     }
 }
 
+impl From<&str> for Pid {
+    fn from(pid: &str) -> Self {
+        let pid: u32 = pid.parse().unwrap();
+        pid.into()
+    }
+}
 
 #[cfg(feature = "tracing")]
 #[macro_use]

@@ -25,6 +25,7 @@ use crate::log;
 use crate::maps;
 use crate::maps::PathMapsEntry;
 use crate::mmap::Mmap;
+use crate::namespace::create_nsinfo;
 use crate::normalize;
 use crate::normalize::create_apk_elf_path;
 use crate::normalize::normalize_sorted_user_addrs_with_entries;
@@ -485,7 +486,9 @@ impl Symbolizer {
             }
         }
 
-        let entries = maps::parse(pid)?;
+        let nsi = create_nsinfo(pid)?;
+        let ns_cookie = nsi.enter_mntns()?;
+        let entries = maps::parse(nsi.pid())?;
         let handler = SymbolizeHandler {
             symbolizer: self,
             all_symbols: Vec::with_capacity(addrs.len()),
@@ -496,6 +499,7 @@ impl Symbolizer {
             |handler: &mut SymbolizeHandler<'_>| handler.all_symbols.as_mut_slice(),
             |sorted_addrs| normalize_sorted_user_addrs_with_entries(sorted_addrs, entries, handler),
         )?;
+        nsi.exit_mntns(ns_cookie)?;
         Ok(handler.all_symbols)
     }
 
