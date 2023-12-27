@@ -22,7 +22,7 @@ use crate::log;
 use crate::maps;
 use crate::maps::PathMapsEntry;
 use crate::mmap::Mmap;
-use crate::namespace::create_nsinfo;
+use crate::namespace::NsInfo;
 use crate::normalize;
 use crate::normalize::normalize_sorted_user_addrs_with_entries;
 use crate::normalize::Handler as _;
@@ -546,9 +546,14 @@ impl Symbolizer {
             }
         }
 
-        let nsi = create_nsinfo(pid)?;
-        let ns_cookie = nsi.enter_mntns()?;
+        #[cfg(target_os = "linux")]
+        let nsi = NsInfo::new(pid)?;
+        #[cfg(target_os = "linux")]
+        nsi.enter_mntns()?;
+        #[cfg(target_os = "linux")]
         let entries = maps::parse(nsi.pid())?;
+        #[cfg(not(target_os = "linux"))]
+        let entries = maps::parse(pid)?;
         let handler = SymbolizeHandler {
             symbolizer: self,
             debug_syms,
@@ -567,7 +572,6 @@ impl Symbolizer {
                 )
             },
         )?;
-        nsi.exit_mntns(ns_cookie)?;
         Ok(handler.all_symbols)
     }
 
